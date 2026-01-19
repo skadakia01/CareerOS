@@ -1,21 +1,17 @@
 import { motion } from 'framer-motion';
 import { Plus, GripVertical, Trash2, Star } from 'lucide-react';
 import { useState } from 'react';
+import { Application } from '../types/application';
 
-interface Application {
-  id: string;
-  company: string;
-  position: string;
-  status: 'applied' | 'interviewing' | 'offer' | 'rejected';
-  appliedDate: string;
-  rating?: number;
-}
+
+
 
 interface KanbanBoardProps {
   applications: Application[];
   onAddClick: () => void;
   onDeleteClick: (id: string) => void;
   onCardClick: (app: Application) => void;
+  onStatusChange: (id: string, status: Application['status']) => void;
 }
 
 const statusConfig = {

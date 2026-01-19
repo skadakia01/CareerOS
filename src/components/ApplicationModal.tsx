@@ -1,9 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Briefcase, DollarSign, Calendar, Star } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Application } from '../types/application';
 
-interface ApplicationData {
-  id?: string;
+/* ----------------------------------
+   Form-only type (DO NOT use Application here)
+---------------------------------- */
+export interface ApplicationFormData {
   company: string;
   position: string;
   status: 'applied' | 'interviewing' | 'offer' | 'rejected';
@@ -14,23 +17,25 @@ interface ApplicationData {
   notes?: string;
 }
 
-interface ApplicationModalProps {
+/* ----------------------------------
+   Props
+---------------------------------- */
+export interface ApplicationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: ApplicationData) => void;
-  initialData?: ApplicationData;
+  onSubmit: (data: ApplicationFormData) => void;
+  initialData?: Application;
   isLoading?: boolean;
 }
 
-export default function ApplicationModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  initialData,
-  isLoading = false,
-}: ApplicationModalProps) {
-  const [formData, setFormData] = useState<ApplicationData>(
-    initialData || {
+/* ----------------------------------
+   Mapper: Domain → Form
+---------------------------------- */
+function mapApplicationToFormData(
+  app?: Application
+): ApplicationFormData {
+  if (!app) {
+    return {
       company: '',
       position: '',
       status: 'applied',
@@ -39,8 +44,41 @@ export default function ApplicationModal({
       interviewDate: '',
       rating: 3,
       notes: '',
-    }
+    };
+  }
+
+  return {
+    company: app.company,
+    position: app.position,
+    status: app.status === 'accepted' ? 'offer' : app.status,
+    salary: '',
+    jobUrl: '',
+    interviewDate: '',
+    rating: 3,
+    notes: '',
+  };
+}
+
+/* ----------------------------------
+   Component
+---------------------------------- */
+export default function ApplicationModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialData,
+  isLoading = false,
+}: ApplicationModalProps) {
+  const [formData, setFormData] = useState<ApplicationFormData>(
+    mapApplicationToFormData(initialData)
   );
+
+  /* Reset form when modal opens or application changes */
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(mapApplicationToFormData(initialData));
+    }
+  }, [isOpen, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +89,7 @@ export default function ApplicationModal({
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -59,13 +98,15 @@ export default function ApplicationModal({
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
           />
 
+          {/* Modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none"
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
           >
-            <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-2xl p-8 max-w-2xl w-full pointer-events-auto max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-white">
                   {initialData ? 'Edit Application' : 'Add New Application'}
@@ -75,48 +116,56 @@ export default function ApplicationModal({
                 </button>
               </div>
 
+              {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
+                  {/* Company */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm text-gray-300 mb-2">
                       Company Name
                     </label>
                     <div className="relative">
                       <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                       <input
-                        type="text"
                         value={formData.company}
-                        onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                        placeholder="e.g., Google"
+                        onChange={(e) =>
+                          setFormData({ ...formData, company: e.target.value })
+                        }
                         required
-                        className="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                        className="w-full pl-10 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white"
                       />
                     </div>
                   </div>
 
+                  {/* Position */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Position</label>
+                    <label className="block text-sm text-gray-300 mb-2">
+                      Position
+                    </label>
                     <input
-                      type="text"
                       value={formData.position}
-                      onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                      placeholder="e.g., Senior Product Manager"
+                      onChange={(e) =>
+                        setFormData({ ...formData, position: e.target.value })
+                      }
                       required
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full py-3 px-4 bg-gray-900 border border-gray-700 rounded-lg text-white"
                     />
                   </div>
 
+                  {/* Status */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
+                    <label className="block text-sm text-gray-300 mb-2">
+                      Status
+                    </label>
                     <select
                       value={formData.status}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          status: e.target.value as 'applied' | 'interviewing' | 'offer' | 'rejected',
+                          status: e.target.value as ApplicationFormData['status'],
                         })
                       }
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full py-3 px-4 bg-gray-900 border border-gray-700 rounded-lg text-white"
                     >
                       <option value="applied">Applied</option>
                       <option value="interviewing">Interviewing</option>
@@ -125,96 +174,55 @@ export default function ApplicationModal({
                     </select>
                   </div>
 
+                  {/* Salary */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Salary Range</label>
+                    <label className="block text-sm text-gray-300 mb-2">
+                      Salary Range
+                    </label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                       <input
-                        type="text"
                         value={formData.salary}
-                        onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-                        placeholder="e.g., $150k - $180k"
-                        className="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                        onChange={(e) =>
+                          setFormData({ ...formData, salary: e.target.value })
+                        }
+                        className="w-full pl-10 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white"
                       />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Job URL</label>
-                    <input
-                      type="url"
-                      value={formData.jobUrl}
-                      onChange={(e) => setFormData({ ...formData, jobUrl: e.target.value })}
-                      placeholder="https://..."
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Interview Date</label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                      <input
-                        type="date"
-                        value={formData.interviewDate}
-                        onChange={(e) => setFormData({ ...formData, interviewDate: e.target.value })}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Rating</label>
-                    <div className="flex items-center gap-1 bg-gray-900 border border-gray-700 rounded-lg p-3">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <motion.button
-                          key={star}
-                          type="button"
-                          whileHover={{ scale: 1.2 }}
-                          onClick={() => setFormData({ ...formData, rating: star })}
-                          className="p-1 transition-colors"
-                        >
-                          <Star
-                            className={`w-5 h-5 ${
-                              star <= (formData.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'
-                            }`}
-                          />
-                        </motion.button>
-                      ))}
                     </div>
                   </div>
                 </div>
 
+                {/* Notes */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Notes</label>
+                  <label className="block text-sm text-gray-300 mb-2">
+                    Notes
+                  </label>
                   <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Add any notes about this application..."
                     rows={4}
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                    value={formData.notes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
+                    className="w-full py-3 px-4 bg-gray-900 border border-gray-700 rounded-lg text-white"
                   />
                 </div>
 
+                {/* Actions */}
                 <div className="flex gap-4">
-                  <motion.button
+                  <button
                     type="submit"
                     disabled={isLoading}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex-1 py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 py-3 bg-white text-black rounded-lg font-semibold disabled:opacity-50"
                   >
-                    {isLoading ? 'Saving...' : 'Save Application'}
-                  </motion.button>
-                  <motion.button
+                    {isLoading ? 'Saving…' : 'Save Application'}
+                  </button>
+                  <button
                     type="button"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
                     onClick={onClose}
-                    className="flex-1 py-3 border border-gray-700 text-white font-semibold rounded-lg hover:border-gray-600 transition-colors"
+                    className="flex-1 py-3 border border-gray-700 text-white rounded-lg"
                   >
                     Cancel
-                  </motion.button>
+                  </button>
                 </div>
               </form>
             </div>
